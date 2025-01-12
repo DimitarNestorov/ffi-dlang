@@ -3,7 +3,7 @@
 	lib ? pkgs.lib,
 	stdenvNoCC ? pkgs.stdenvNoCC,
 	llvmPackages ? pkgs.llvmPackages_18,
-	target ? stdenvNoCC.hostPlatform.config,
+	target ? stdenvNoCC.hostPlatform,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
@@ -16,12 +16,15 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 		(pkgs.ldc.override { llvm_18 = llvmPackages.llvm; })
 	];
 
-	buildPhase = ''
+	buildPhase = let
+		zigTarget = (import ./utils.nix { inherit lib; }).nixTargetToZigTarget target.parsed;
+		program = if target.isWindows then "program.exe" else "program";
+	in ''
 		export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-		ldc2 -c calc.d
-		zig cc -c main.c
+		ldc2 -mtriple=${target.config} -c calc.d
+		zig cc -target ${zigTarget} -c main.c -o main.o
 		mkdir -p $out/bin
-		zig build-exe calc.o main.o -lc -femit-bin=$out/bin/program
+		zig build-exe calc.o main.o -lc -target ${zigTarget} -femit-bin=$out/bin/${program}
 	'';
 
 	meta = {
