@@ -7,10 +7,16 @@
 
 	outputs = { self, nixpkgs }: 
 	let
-		pkgs = nixpkgs.legacyPackages."aarch64-darwin";
+		linuxSystems = ["x86_64-linux" "aarch64-linux"];
+		darwinSystems = ["x86_64-darwin" "aarch64-darwin"];
+		allSystems = linuxSystems ++ darwinSystems;
+		forAllSystems = function:
+			nixpkgs.lib.attrsets.genAttrs allSystems (system: function nixpkgs.legacyPackages.${system});
 	in {
-		packages."aarch64-darwin".default = pkgs.callPackage ./default.nix {
-			llvmPackages = pkgs.llvmPackages_18;
-		};
+		packages = forAllSystems (pkgs: {
+			default = pkgs.callPackage ./default.nix {
+				llvmPackages = pkgs.llvmPackages_18;
+			};
+		});
 	};
 }
